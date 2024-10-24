@@ -5,7 +5,8 @@ import { Order, OrderParams } from "./modules/order/order";
 
 expressFramework.listen(5555, () => {
   console.log("Server already is running on port: 5555");
-  for (let i = 0; i < 500; i++) {
+  const batchSize = 5000;
+  for (let i = 0; i < batchSize; i++) {
     const order = new Order({
       owner_name: `Customer ${i + 1}`,
       items: [

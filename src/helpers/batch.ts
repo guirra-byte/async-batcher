@@ -8,16 +8,17 @@ type SwitchCapacity = Record<string, boolean>;
 type BatchWorkers = Record<string, Worker>;
 
 export class OrderEvent {
-  private MAX_BATCH_SIZE: number = 100;
+  private MAX_BATCH_SIZE: number = 5000;
   private incomming_orders: Batch = {};
   private reprocess_queue: Batch = {};
   private workers: BatchWorkers = {};
   private allBatchesCapacityReached: SwitchCapacity = {};
   private capacityReachedCount: number = 0;
   private processedCount: number = 0;
+  private incommingItemsCount: number = 0;
 
   async receiveOrder({ owner_name, at, items }: OrderParams) {
-    const batchesToProcessing = this.MAX_BATCH_SIZE / 20;
+    const batchesToProcessing = 5;
     //Preparar Batches e seus respectivos Workers;
     for (let tag = 0; tag < batchesToProcessing; tag++) {
       if (!this.workers[`batch${tag}`]) {
@@ -41,6 +42,7 @@ export class OrderEvent {
       if (batches.length < this.MAX_BATCH_SIZE / batchesToProcessing) {
         const newOrder = new Order({ owner_name, at, items });
         this.incomming_orders[tag].push(newOrder.params);
+        this.incommingItemsCount += 1;
 
         if (batches.length === this.MAX_BATCH_SIZE / batchesToProcessing) {
           //Marca batch como cheio;
@@ -62,6 +64,7 @@ export class OrderEvent {
         JSON.stringify(this.incomming_orders),
         async (err) => {
           if (err) throw err;
+          console.log(`${this.incommingItemsCount} items recebidos!`);
           await this.capacityReached();
         }
       );
@@ -83,7 +86,7 @@ export class OrderEvent {
           smallBatchIndex++
         ) {
           tmp.push(batchToProcess[smallBatchIndex]);
-          if (tmp.length === this.MAX_BATCH_SIZE / 5) {
+          if (tmp.length === batchToProcess.length / 5) {
             smallBatches.push(tmp);
             tmp = [];
           }
@@ -96,6 +99,7 @@ export class OrderEvent {
           );
         };
 
+        this.incomming_orders[batchTag] = [];
         sendToProcessing(settledSmallBatch);
         worker.on("message", (back_msg: string) => {
           if (back_msg !== "") {
@@ -123,8 +127,8 @@ export class OrderEvent {
                   });
               }
 
-              if (this.processedCount === 100) {
-                console.log("All items be processed!");
+              if (this.processedCount === this.MAX_BATCH_SIZE) {
+                console.log(`${this.processedCount} itens foram processados!`);
                 process.exit();
               }
             }
