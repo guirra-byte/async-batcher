@@ -9,9 +9,13 @@ type BatchWorkers = Record<string, Worker>;
 
 export class OrderEvent {
   private MAX_BATCH_SIZE: number = 5000;
-  private incomming_orders: Batch = {};
+
   private reprocess_queue: Batch = {};
+  public reprocess: boolean = false;
+
+  private incomming_orders: Batch = {};
   private workers: BatchWorkers = {};
+
   private allBatchesCapacityReached: SwitchCapacity = {};
   private capacityReachedCount: number = 0;
   private processedCount: number = 0;
